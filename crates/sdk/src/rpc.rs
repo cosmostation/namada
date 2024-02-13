@@ -102,9 +102,6 @@ pub async fn query_tx_status(
             "Transaction status query deadline of {deadline:?} exceeded"
         );
         match status {
-            TxEventQuery::Accepted(_) => {
-                Error::Tx(TxSubmitError::AcceptTimeout)
-            }
             TxEventQuery::Applied(_) => {
                 Error::Tx(TxSubmitError::AppliedTimeout)
             }
@@ -459,8 +456,6 @@ pub async fn query_has_storage_key<C: crate::queries::Client + Sync>(
 /// Represents a query for an event pertaining to the specified transaction
 #[derive(Debug, Copy, Clone)]
 pub enum TxEventQuery<'a> {
-    /// Queries whether transaction with given hash was accepted
-    Accepted(&'a str),
     /// Queries whether transaction with given hash was applied
     Applied(&'a str),
 }
@@ -469,7 +464,6 @@ impl<'a> TxEventQuery<'a> {
     /// The event type to which this event query pertains
     pub fn event_type(self) -> &'static str {
         match self {
-            TxEventQuery::Accepted(_) => "accepted",
             TxEventQuery::Applied(_) => "applied",
         }
     }
@@ -477,7 +471,6 @@ impl<'a> TxEventQuery<'a> {
     /// The transaction to which this event query pertains
     pub fn tx_hash(self) -> &'a str {
         match self {
-            TxEventQuery::Accepted(tx_hash) => tx_hash,
             TxEventQuery::Applied(tx_hash) => tx_hash,
         }
     }
@@ -487,9 +480,6 @@ impl<'a> TxEventQuery<'a> {
 impl<'a> From<TxEventQuery<'a>> for Query {
     fn from(tx_query: TxEventQuery<'a>) -> Self {
         match tx_query {
-            TxEventQuery::Accepted(tx_hash) => {
-                Query::default().and_eq("accepted.hash", tx_hash)
-            }
             TxEventQuery::Applied(tx_hash) => {
                 Query::default().and_eq("applied.hash", tx_hash)
             }
@@ -505,15 +495,9 @@ pub async fn query_tx_events<C: crate::queries::Client + Sync>(
 ) -> std::result::Result<Option<Event>, <C as crate::queries::Client>::Error> {
     let tx_hash: Hash = tx_event_query.tx_hash().try_into().unwrap();
     match tx_event_query {
-        TxEventQuery::Accepted(_) => {
-            RPC.shell().accepted(client, &tx_hash).await
-        }
-        /*.wrap_err_with(|| {
-            eyre!("Failed querying whether a transaction was accepted")
-        })*/,
-        TxEventQuery::Applied(_) => RPC.shell().applied(client, &tx_hash).await, /*.wrap_err_with(|| {
-                                                                                     eyre!("Error querying whether a transaction was applied")
-                                                                                 })*/
+        TxEventQuery::Applied(_) => RPC.shell().applied(client, &tx_hash).await, /* .wrap_err_with(|| {
+                                                                                  * eyre!("Error querying whether a transaction was applied")
+                                                                                  * }) */
     }
 }
 
@@ -560,10 +544,8 @@ pub enum TxBroadcastData {
     Live {
         /// Transaction to broadcast
         tx: Tx,
-        /// Hash of the wrapper transaction
-        wrapper_hash: String,
-        /// Hash of decrypted transaction
-        decrypted_hash: String,
+        /// Hash of the transaction
+        tx_hash: String,
     },
 }
 

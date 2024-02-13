@@ -60,7 +60,6 @@ fn process_tx(c: &mut Criterion) {
         b.iter_batched(
             || {
                 (
-                    shell.wl_storage.storage.tx_queue.clone(),
                     // Prevent block out of gas and replay protection
                     TempWlStorage::new(&shell.wl_storage.storage),
                     ValidationMeta::from(&shell.wl_storage),
@@ -70,7 +69,6 @@ fn process_tx(c: &mut Criterion) {
                 )
             },
             |(
-                tx_queue,
                 mut temp_wl_storage,
                 mut validation_meta,
                 mut vp_wasm_cache,
@@ -82,7 +80,6 @@ fn process_tx(c: &mut Criterion) {
                     shell
                         .check_proposal_tx(
                             &wrapper,
-                            &mut tx_queue.iter(),
                             &mut validation_meta,
                             &mut temp_wl_storage,
                             datetime,

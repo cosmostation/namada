@@ -11,9 +11,7 @@ use namada_sdk::tx::TX_TRANSFER_WASM;
 use namada_state::wl_storage::WriteLogAndStorage;
 use namada_state::StorageRead;
 use namada_tx::data::protocol::ProtocolTxType;
-use namada_tx::data::{
-    DecryptedTx, GasLimit, TxResult, TxType, VpsResult, WrapperTx,
-};
+use namada_tx::data::{GasLimit, TxResult, TxType, VpsResult, WrapperTx};
 use namada_tx::{Section, Tx};
 use namada_vote_ext::EthereumTxData;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -168,8 +166,7 @@ where
     CA: 'static + WasmCacheAccess + Sync,
 {
     match tx.header().tx_type {
-        TxType::Raw => Err(Error::TxTypeError),
-        TxType::Decrypted(DecryptedTx::Decrypted) => apply_wasm_tx(
+        TxType::Raw => apply_wasm_tx(
             tx,
             &tx_index,
             ShellParams {
@@ -186,7 +183,7 @@ where
             let fee_unshielding_transaction =
                 get_fee_unshielding_transaction(&tx, wrapper);
             let changed_keys = apply_wrapper_tx(
-                tx,
+                tx.clone(),
                 wrapper,
                 fee_unshielding_transaction,
                 tx_bytes,
@@ -198,18 +195,20 @@ where
                 },
                 wrapper_args,
             )?;
-            Ok(TxResult {
-                gas_used: tx_gas_meter.get_tx_consumed_gas(),
-                changed_keys,
-                vps_result: VpsResult::default(),
-                initialized_accounts: vec![],
-                ibc_events: BTreeSet::default(),
-                eth_bridge_events: BTreeSet::default(),
-            })
+            let mut inner_res = apply_wasm_tx(
+                tx,
+                &tx_index,
+                ShellParams {
+                    tx_gas_meter,
+                    wl_storage,
+                    vp_wasm_cache,
+                    tx_wasm_cache,
+                },
+            )?;
+            inner_res.wrapper_changed_keys = changed_keys;
+            Ok(inner_res)
         }
-        TxType::Decrypted(DecryptedTx::Undecryptable) => {
-            Ok(TxResult::default())
-        }
+        _ => Ok(TxResult::default()),
     }
 }
 
@@ -627,6 +626,7 @@ where
 
     Ok(TxResult {
         gas_used,
+        wrapper_changed_keys: Default::default(),
         changed_keys,
         vps_result,
         initialized_accounts,
@@ -645,7 +645,7 @@ where
     D: 'static + DB + for<'iter> DBIter<'iter> + Sync,
     H: 'static + StorageHasher + Sync,
 {
-    if let TxType::Decrypted(DecryptedTx::Decrypted) = tx.header().tx_type {
+    if let TxType::Wrapper(_) = tx.header().tx_type {
         if let Some(code_sec) = tx
             .get_section(tx.code_sechash())
             .and_then(|x| Section::code_sec(&x))
@@ -1313,7 +1313,6 @@ mod tests {
         let (mut wl_storage, _validators) = test_utils::setup_default_storage();
 
         let mut tx = Tx::new(ChainId::default(), None);
-        tx.update_header(TxType::Decrypted(DecryptedTx::Decrypted));
         // pseudo-random code hash
         let code = vec![1_u8, 2, 3];
         let tx_hash = Hash::sha256(&code);

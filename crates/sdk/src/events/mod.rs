@@ -74,8 +74,6 @@ pub struct Event {
 /// The two types of custom events we currently use
 #[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize)]
 pub enum EventType {
-    /// The transaction was accepted to be included in a block
-    Accepted,
     /// The transaction was applied during block finalization
     Applied,
     /// The IBC transaction was applied during block finalization
@@ -91,7 +89,6 @@ pub enum EventType {
 impl Display for EventType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EventType::Accepted => write!(f, "accepted"),
             EventType::Applied => write!(f, "applied"),
             EventType::Ibc(t) => write!(f, "{}", t),
             EventType::Proposal => write!(f, "proposal"),
@@ -107,7 +104,6 @@ impl FromStr for EventType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "accepted" => Ok(EventType::Accepted),
             "applied" => Ok(EventType::Applied),
             "proposal" => Ok(EventType::Proposal),
             "pgf_payments" => Ok(EventType::PgfPayment),
@@ -130,24 +126,11 @@ impl Event {
         let mut event = match tx.header().tx_type {
             TxType::Wrapper(_) => {
                 let mut event = Event {
-                    event_type: EventType::Accepted,
-                    level: EventLevel::Tx,
-                    attributes: HashMap::new(),
-                };
-                event["hash"] = tx.header_hash().to_string();
-                event
-            }
-            TxType::Decrypted(_) => {
-                let mut event = Event {
                     event_type: EventType::Applied,
                     level: EventLevel::Tx,
                     attributes: HashMap::new(),
                 };
-                event["hash"] = tx
-                    .clone()
-                    .update_header(TxType::Raw)
-                    .header_hash()
-                    .to_string();
+                event["hash"] = tx.header_hash().to_string();
                 event
             }
             TxType::Protocol(_) => {

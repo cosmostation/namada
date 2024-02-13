@@ -25,7 +25,6 @@ use namada_merkle_tree::{
 use crate::db::{
     BlockStateRead, BlockStateWrite, DBIter, DBWriteBatch, Error, Result, DB,
 };
-use crate::tx_queue::TxQueue;
 use crate::types::{KVBytes, PrefixIterator};
 
 const SUBSPACE_CF: &str = "subspace";
@@ -109,10 +108,6 @@ impl DB for MockDB {
                 }
                 None => return Ok(None),
             };
-        let tx_queue: TxQueue = match self.0.borrow().get("tx_queue") {
-            Some(bytes) => types::decode(bytes).map_err(Error::CodingError)?,
-            None => return Ok(None),
-        };
 
         let ethereum_height: Option<ethereum_structs::BlockHeight> =
             match self.0.borrow().get("ethereum_height") {
@@ -237,7 +232,6 @@ impl DB for MockDB {
                 address_gen,
                 results,
                 conversion_state,
-                tx_queue,
                 ethereum_height,
                 eth_events_queue,
             })),
@@ -270,7 +264,6 @@ impl DB for MockDB {
             conversion_state,
             ethereum_height,
             eth_events_queue,
-            tx_queue,
         }: BlockStateWrite = state;
 
         // Epoch start height and time
@@ -293,9 +286,6 @@ impl DB for MockDB {
             "eth_events_queue".into(),
             types::encode(&eth_events_queue),
         );
-        self.0
-            .borrow_mut()
-            .insert("tx_queue".into(), types::encode(&tx_queue));
         self.0
             .borrow_mut()
             .insert("conversion_state".into(), types::encode(conversion_state));

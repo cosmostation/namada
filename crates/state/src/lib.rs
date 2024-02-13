@@ -36,7 +36,7 @@ use namada_merkle_tree::{Error as MerkleTreeError, MerkleRoot};
 use namada_parameters::{self, EpochDuration, Parameters};
 pub use namada_storage::{Error as StorageError, Result as StorageResult, *};
 use thiserror::Error;
-use tx_queue::{ExpiredTxsQueue, TxQueue};
+use tx_queue::ExpiredTxsQueue;
 pub use wl_storage::{
     iter_prefix_post, iter_prefix_pre, PrefixIter, TempWlStorage, WlStorage,
 };
@@ -89,8 +89,6 @@ where
     pub tx_index: TxIndex,
     /// The currently saved conversion state
     pub conversion_state: ConversionState,
-    /// Wrapper txs to be decrypted in the next block proposal
-    pub tx_queue: TxQueue,
     /// Queue of expired transactions that need to be retransmitted.
     ///
     /// These transactions do not need to be persisted, as they are
@@ -210,7 +208,6 @@ where
             update_epoch_blocks_delay: None,
             tx_index: TxIndex::default(),
             conversion_state: ConversionState::default(),
-            tx_queue: TxQueue::default(),
             expired_txs_queue: ExpiredTxsQueue::default(),
             native_token,
             ethereum_height: None,
@@ -236,7 +233,6 @@ where
             results,
             address_gen,
             conversion_state,
-            tx_queue,
             ethereum_height,
             eth_events_queue,
         }) = self.db.read_last_block()?
@@ -256,7 +252,6 @@ where
             self.block.tree = MerkleTree::new(merkle_tree_stores)
                 .or_else(|_| self.rebuild_full_merkle_tree(height))?;
             self.conversion_state = conversion_state;
-            self.tx_queue = tx_queue;
             self.ethereum_height = ethereum_height;
             self.eth_events_queue = eth_events_queue;
             tracing::debug!("Loaded storage from DB");
@@ -313,7 +308,6 @@ where
             update_epoch_blocks_delay: self.update_epoch_blocks_delay,
             address_gen: &self.address_gen,
             conversion_state: &self.conversion_state,
-            tx_queue: &self.tx_queue,
             ethereum_height: self.ethereum_height.as_ref(),
             eth_events_queue: &self.eth_events_queue,
         };
@@ -1145,7 +1139,6 @@ pub mod testing {
                 update_epoch_blocks_delay: None,
                 tx_index: TxIndex::default(),
                 conversion_state: ConversionState::default(),
-                tx_queue: TxQueue::default(),
                 expired_txs_queue: ExpiredTxsQueue::default(),
                 native_token: address::nam(),
                 ethereum_height: None,
