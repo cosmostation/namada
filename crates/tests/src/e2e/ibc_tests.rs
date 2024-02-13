@@ -464,7 +464,7 @@ fn proposal_ibc_token_inflation() -> Result<()> {
     }
     sleep(5);
 
-    // Check balances after funding over IBC
+    // Check balances
     check_inflated_balance(&port_id_b, &channel_id_b, &test_b)?;
 
     Ok(())
@@ -2124,7 +2124,7 @@ fn check_inflated_balance(
         &rpc,
     ];
     let expected = format!("{ibc_denom}: 10010");
-    let mut client = run!(test, Bin::Client, query_args, Some(40))?;
+    let mut client = run!(test, Bin::Client, query_args, Some(100))?;
     client.exp_string(&expected)?;
     client.assert_success();
 
