@@ -1694,6 +1694,7 @@ fn dynamic_assets() -> Result<()> {
             .read(&token_map_key)
             .unwrap()
             .unwrap_or_default();
+        let test_tokens = tokens.clone();
         tokens.retain(|k, _v| *k == nam);
         node.shell
             .lock()
@@ -1701,7 +1702,7 @@ fn dynamic_assets() -> Result<()> {
             .wl_storage
             .write(&token_map_key, tokens.clone())
             .unwrap();
-        tokens
+        test_tokens
     };
     // add necessary viewing keys to shielded context
     run(
