@@ -256,7 +256,7 @@ where
     }
 
     /// Delete the provided transaction's hash from storage.
-    pub fn delete_tx_hash(&mut self, hash: Hash) -> write_log::Result<()> {
+    pub fn delete_tx_hash(&mut self, hash: Hash) {
         self.write_log.delete_tx_hash(hash)
     }
 

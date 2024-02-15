@@ -688,24 +688,10 @@ impl WriteLog {
     }
 
     /// Remove the transaction hash
-    pub(crate) fn delete_tx_hash(&mut self, hash: Hash) -> Result<()> {
-        match self
+    pub(crate) fn delete_tx_hash(&mut self, hash: Hash) {
+        self
             .replay_protection
-            .insert(hash, ReProtStorageModification::Delete)
-        {
-            None => Ok(()),
-            // Allow overwriting a previous finalize request
-            Some(ReProtStorageModification::Finalize) => Ok(()),
-            Some(_) =>
-            // Cannot delete an hash that still has to be written to
-            // storage or has already been deleted
-            {
-                Err(Error::ReplayProtection(format!(
-                    "Requested a delete on hash {hash} not yet committed to \
-                     storage"
-                )))
-            }
-        }
+            .insert(hash, ReProtStorageModification::Delete);
     }
 
     /// Move the transaction hash of the previous block to the list of all
@@ -999,8 +985,7 @@ mod tests {
 
         // delete previous hash
         write_log
-            .delete_tx_hash(Hash::sha256("tx1".as_bytes()))
-            .unwrap();
+            .delete_tx_hash(Hash::sha256("tx1".as_bytes()));
 
         // finalize previous hashes
         for tx in ["tx2", "tx3"] {
@@ -1030,8 +1015,7 @@ mod tests {
 
         // try to delete finalized hash which shouldn't work
         write_log
-            .delete_tx_hash(Hash::sha256("tx2".as_bytes()))
-            .unwrap();
+            .delete_tx_hash(Hash::sha256("tx2".as_bytes()));
 
         // commit a block
         write_log
