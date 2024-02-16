@@ -511,10 +511,9 @@ impl RocksDB {
         // restarting the chain
         tracing::info!("Reverting non-height-prepended metadata keys");
         batch.put_cf(state_cf, "height", types::encode(&previous_height));
-        for metadata_key in [
-            "next_epoch_min_start_height",
-            "next_epoch_min_start_time",
-        ] {
+        for metadata_key in
+            ["next_epoch_min_start_height", "next_epoch_min_start_time"]
+        {
             let previous_key = format!("pred/{}", metadata_key);
             let previous_value = self
                 .0

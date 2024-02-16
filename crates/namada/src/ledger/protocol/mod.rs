@@ -196,7 +196,8 @@ where
                     tx_wasm_cache,
                 },
                 wrapper_args,
-            ).map_err(|e| Error::WrapperRunnerError(e.to_string()))?;
+            )
+            .map_err(|e| Error::WrapperRunnerError(e.to_string()))?;
             let mut inner_res = apply_wasm_tx(
                 tx,
                 &tx_index,
@@ -1312,15 +1313,15 @@ mod tests {
 
     #[test]
     fn test_apply_wasm_tx_allowlist() {
+        use namada_core::types::address::nam;
         use namada_core::types::key::{common, RefTo};
         use namada_core::types::storage::Epoch;
-        use namada_core::types::address::nam;
         use namada_core::types::token::DenominatedAmount;
         use namada_tx::data::Fee;
 
         let (mut wl_storage, _validators) = test_utils::setup_default_storage();
         let keypair: common::SecretKey = {
-            use namada_core::types::key::{ed25519, SigScheme, SecretKey};
+            use namada_core::types::key::{ed25519, SecretKey, SigScheme};
             use rand::prelude::ThreadRng;
             use rand::thread_rng;
 

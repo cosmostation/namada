@@ -689,8 +689,7 @@ impl WriteLog {
 
     /// Remove the transaction hash
     pub(crate) fn delete_tx_hash(&mut self, hash: Hash) {
-        self
-            .replay_protection
+        self.replay_protection
             .insert(hash, ReProtStorageModification::Delete);
     }
 
@@ -984,8 +983,7 @@ mod tests {
             .unwrap();
 
         // delete previous hash
-        write_log
-            .delete_tx_hash(Hash::sha256("tx1".as_bytes()));
+        write_log.delete_tx_hash(Hash::sha256("tx1".as_bytes()));
 
         // finalize previous hashes
         for tx in ["tx2", "tx3"] {
@@ -1014,8 +1012,7 @@ mod tests {
         );
 
         // try to delete finalized hash which shouldn't work
-        write_log
-            .delete_tx_hash(Hash::sha256("tx2".as_bytes()));
+        write_log.delete_tx_hash(Hash::sha256("tx2".as_bytes()));
 
         // commit a block
         write_log
