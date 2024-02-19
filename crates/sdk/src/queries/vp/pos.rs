@@ -15,7 +15,7 @@ use namada_proof_of_stake::slashing::{
     find_all_enqueued_slashes, find_all_slashes,
 };
 use namada_proof_of_stake::storage::{
-    bond_handle, read_all_validator_addresses,
+    bond_handle, read_active_validator_addresses, read_all_validator_addresses,
     read_below_capacity_validator_set_addresses_with_stake,
     read_consensus_validator_set_addresses_with_stake, read_pos_params,
     read_total_stake, read_validator_avatar, read_validator_description,
@@ -240,7 +240,8 @@ where
     H: 'static + StorageHasher + Sync,
 {
     let epoch = epoch.unwrap_or(ctx.wl_storage.storage.last_epoch);
-    read_all_validator_addresses(ctx.wl_storage, epoch)
+    // read_all_validator_addresses(ctx.wl_storage, epoch)
+    read_active_validator_addresses(ctx.wl_storage, epoch)
 }
 
 /// Get the validator commission rate and max commission rate change per epoch
