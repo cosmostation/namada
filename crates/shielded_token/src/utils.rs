@@ -3,7 +3,7 @@
 use masp_primitives::merkle_tree::CommitmentTree;
 use masp_primitives::sapling::Node;
 use masp_primitives::transaction::Transaction;
-use namada_core::types::storage::IndexedTx;
+use namada_core::types::storage::StoredIndexedTx;
 use namada_storage::{Error, Result, StorageRead, StorageWrite};
 
 use crate::storage_key::{
@@ -73,10 +73,9 @@ pub fn handle_masp_tx(
     if let Some(key) = pin_key {
         ctx.write(
             &masp_pin_tx_key(key),
-            IndexedTx {
+            StoredIndexedTx {
                 height: ctx.get_block_height()?,
                 index: ctx.get_tx_index()?,
-                is_wrapper: false,
             },
         )?;
     }

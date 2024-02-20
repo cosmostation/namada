@@ -281,7 +281,9 @@ where
                             }),
                         )
                     }
-                    TxType::Decrypted(_) => unreachable!(),
+                    TxType::Decrypted(_) => {
+                        unreachable!("Received decrypted tx in FinalizeBlock")
+                    }
                     TxType::Raw => {
                         tracing::error!(
                             "Internal logic error: FinalizeBlock received a \
@@ -851,7 +853,7 @@ mod test_finalize_block {
     use namada::proof_of_stake::{unjail_validator, ADDRESS as pos_address};
     use namada::state::StorageWrite;
     use namada::token::{Amount, DenominatedAmount, NATIVE_MAX_DECIMAL_PLACES};
-    use namada::tx::data::{Fee, WrapperTx};
+    use namada::tx::data::{DecryptedTx, Fee, WrapperTx};
     use namada::tx::{Code, Data, Section, Signature};
     use namada::types::dec::{Dec, POS_DECIMAL_PRECISION};
     use namada::types::ethereum_events::{EthAddress, Uint as ethUint};
@@ -1001,6 +1003,27 @@ mod test_finalize_block {
         assert_eq!(event.event_type.to_string(), String::from("applied"));
         let code = event.attributes.get("code").expect("Test failed");
         assert_eq!(code, &String::from(ResultCode::InvalidTx));
+    }
+
+    #[test]
+    #[should_panic(expected = "Received decrypted tx in FinalizeBlock")]
+    fn test_decrypted_is_unreachable() {
+        const LAST_HEIGHT: BlockHeight = BlockHeight(3);
+        let (mut shell, _, _, _) = setup_at_height(LAST_HEIGHT);
+        let tx = Tx::from_type(TxType::Decrypted(DecryptedTx::Undecryptable))
+            .to_bytes();
+        let processed_tx = ProcessedTx {
+            tx: tx.into(),
+            result: TxResult {
+                code: ResultCode::Ok.into(),
+                info: "".into(),
+            },
+        };
+        let req = FinalizeBlock {
+            txs: vec![processed_tx],
+            ..Default::default()
+        };
+        _ = shell.finalize_block(req);
     }
 
     /// Test that once a validator's vote for an Ethereum event lands

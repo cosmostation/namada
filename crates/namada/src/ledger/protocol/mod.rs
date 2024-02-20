@@ -212,7 +212,7 @@ where
             inner_res.wrapper_changed_keys = changed_keys;
             Ok(inner_res)
         }
-        _ => Ok(TxResult::default()),
+        TxType::Decrypted(_) => Err(Error::TxTypeError),
     }
 }
 

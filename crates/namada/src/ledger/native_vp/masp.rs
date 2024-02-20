@@ -12,7 +12,7 @@ use masp_primitives::transaction::Transaction;
 use namada_core::types::address::Address;
 use namada_core::types::address::InternalAddress::Masp;
 use namada_core::types::masp::encode_asset_type;
-use namada_core::types::storage::{IndexedTx, Key};
+use namada_core::types::storage::{Key, StoredIndexedTx};
 use namada_gas::MASP_VERIFY_SHIELDED_TX_GAS;
 use namada_sdk::masp::verify_shielded_tx;
 use namada_state::{OptionExt, ResultExt};
@@ -268,14 +268,11 @@ where
             1 => {
                 match self
                     .ctx
-                    .read_post::<IndexedTx>(pin_keys.first().unwrap())?
+                    .read_post::<StoredIndexedTx>(pin_keys.first().unwrap())?
                 {
-                    Some(IndexedTx {
-                        height,
-                        index,
-                        is_wrapper: false,
-                    }) if height == self.ctx.get_block_height()?
-                        && index == self.ctx.get_tx_index()? => {}
+                    Some(StoredIndexedTx { height, index })
+                        if height == self.ctx.get_block_height()?
+                            && index == self.ctx.get_tx_index()? => {}
                     Some(_) => {
                         return Err(Error::NativeVpError(
                             native_vp::Error::SimpleMessage(
