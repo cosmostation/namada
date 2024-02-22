@@ -1,6 +1,5 @@
 //! Queries router and handlers for PoS validity predicate
 
-use std::borrow::Borrow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
@@ -17,7 +16,7 @@ use namada_proof_of_stake::slashing::{
 };
 use namada_proof_of_stake::storage::{
     bond_handle, liveness_sum_missed_votes_handle,
-    read_active_validator_addresses, read_all_validator_addresses,
+    read_active_validator_addresses,
     read_below_capacity_validator_set_addresses_with_stake,
     read_consensus_validator_set_addresses_with_stake, read_pos_params,
     read_total_stake, read_validator_avatar, read_validator_description,
@@ -48,8 +47,7 @@ router! {POS,
         ( "addresses" / [epoch: opt Epoch] )
             -> HashSet<Address> = validator_addresses,
 
-        ( "livenesses" / [epoch: opt Epoch] )
-            -> Vec<(Address, String, u64)> = validator_livenesses,
+        ( "livenesses" ) -> Vec<(Address, String, u64)> = validator_livenesses,
 
         ( "stake" / [validator: Address] / [epoch: opt Epoch] )
             -> Option<token::Amount> = validator_stake,
@@ -251,13 +249,12 @@ where
 /// Prod by Jeongseup
 fn validator_livenesses<D, H, V, T>(
     ctx: RequestCtx<'_, D, H, V, T>,
-    epoch: Option<Epoch>,
 ) -> namada_storage::Result<Vec<(Address, String, u64)>>
 where
     D: 'static + DB + for<'iter> DBIter<'iter> + Sync,
     H: 'static + StorageHasher + Sync,
 {
-    let epoch = epoch.unwrap_or(ctx.wl_storage.storage.last_epoch);
+    let epoch = ctx.wl_storage.storage.last_epoch;
 
     let mut result = vec![];
 
