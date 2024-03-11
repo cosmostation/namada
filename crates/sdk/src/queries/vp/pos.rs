@@ -1,10 +1,8 @@
 //! Queries router and handlers for PoS validity predicate
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use namada_core::address::Address;
-use namada_core::key::common;
+use namada_core::key::{common, tm_consensus_key_raw_hash};
 use namada_core::storage::Epoch;
 use namada_core::token;
 use namada_proof_of_stake::parameters::PosParams;
@@ -15,7 +13,8 @@ use namada_proof_of_stake::slashing::{
     find_all_enqueued_slashes, find_all_slashes,
 };
 use namada_proof_of_stake::storage::{
-    bond_handle, read_all_validator_addresses,
+    bond_handle, liveness_sum_missed_votes_handle,
+    read_active_validator_addresses,
     read_below_capacity_validator_set_addresses_with_stake,
     read_consensus_validator_set_addresses_with_stake, read_pos_params,
     read_total_stake, read_validator_avatar, read_validator_description,
@@ -33,6 +32,7 @@ use namada_proof_of_stake::{bond_amount, query_reward_tokens};
 use namada_state::{DBIter, StorageHasher, DB};
 use namada_storage::collections::lazy_map;
 use namada_storage::OptionExt;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use crate::queries::types::RequestCtx;
 
@@ -45,6 +45,8 @@ router! {POS,
 
         ( "addresses" / [epoch: opt Epoch] )
             -> HashSet<Address> = validator_addresses,
+
+        ( "livenesses" ) -> Vec<(Address, String, u64)> = validator_livenesses,
 
         ( "stake" / [validator: Address] / [epoch: opt Epoch] )
             -> Option<token::Amount> = validator_stake,
@@ -229,8 +231,7 @@ where
     namada_proof_of_stake::is_delegator(ctx.state, &addr, epoch)
 }
 
-/// Get all the validator known addresses. These validators may be in any state,
-/// e.g. consensus, below-capacity, inactive or jailed.
+/// Prod by Jeongseup
 fn validator_addresses<D, H, V, T>(
     ctx: RequestCtx<'_, D, H, V, T>,
     epoch: Option<Epoch>,
@@ -240,7 +241,44 @@ where
     H: 'static + StorageHasher + Sync,
 {
     let epoch = epoch.unwrap_or(ctx.state.in_mem().last_epoch);
-    read_all_validator_addresses(ctx.state, epoch)
+    read_active_validator_addresses(ctx.state, epoch)
+}
+
+/// Prod by Jeongseup
+fn validator_livenesses<D, H, V, T>(
+    ctx: RequestCtx<'_, D, H, V, T>,
+) -> namada_storage::Result<Vec<(Address, String, u64)>>
+where
+    D: 'static + DB + for<'iter> DBIter<'iter> + Sync,
+    H: 'static + StorageHasher + Sync,
+{
+    let epoch = ctx.wl_storage.storage.last_epoch;
+
+    let mut result = vec![];
+
+    let validator_set = read_active_validator_addresses(ctx.wl_storage, epoch)?;
+    for validator_address in validator_set.iter() {
+        let pubkey = namada_proof_of_stake::storage::get_consensus_key(
+            ctx.wl_storage,
+            validator_address,
+            epoch,
+        )?
+        .unwrap();
+
+        let tendermint_address = tm_consensus_key_raw_hash(&pubkey);
+        let sum_liveness_handle = liveness_sum_missed_votes_handle();
+        let missed_counter = sum_liveness_handle
+            .get(ctx.wl_storage, validator_address)?
+            .unwrap();
+
+        result.push((
+            validator_address.to_owned(),
+            tendermint_address,
+            missed_counter,
+        ))
+    }
+
+    Ok(result)
 }
 
 /// Get the validator commission rate and max commission rate change per epoch
