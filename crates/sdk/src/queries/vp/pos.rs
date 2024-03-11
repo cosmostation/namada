@@ -252,14 +252,14 @@ where
     D: 'static + DB + for<'iter> DBIter<'iter> + Sync,
     H: 'static + StorageHasher + Sync,
 {
-    let epoch = ctx.wl_storage.storage.last_epoch;
+    let epoch = ctx.state.in_mem().last_epoch;
 
     let mut result = vec![];
 
-    let validator_set = read_active_validator_addresses(ctx.wl_storage, epoch)?;
+    let validator_set = read_active_validator_addresses(ctx.state, epoch)?;
     for validator_address in validator_set.iter() {
         let pubkey = namada_proof_of_stake::storage::get_consensus_key(
-            ctx.wl_storage,
+            ctx.state,
             validator_address,
             epoch,
         )?
@@ -268,7 +268,7 @@ where
         let tendermint_address = tm_consensus_key_raw_hash(&pubkey);
         let sum_liveness_handle = liveness_sum_missed_votes_handle();
         let missed_counter = sum_liveness_handle
-            .get(ctx.wl_storage, validator_address)?
+            .get(ctx.state, validator_address)?
             .unwrap();
 
         result.push((

@@ -612,7 +612,7 @@ where
 /// Read all addresses from the consensus set
 pub fn read_active_validator_addresses<S>(
     storage: &S,
-    epoch: namada_core::types::storage::Epoch,
+    epoch: Epoch,
 ) -> namada_storage::Result<HashSet<Address>>
 where
     S: StorageRead,
