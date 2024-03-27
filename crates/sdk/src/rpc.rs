@@ -770,6 +770,13 @@ pub async fn get_all_validators<C: crate::queries::Client + Sync>(
     )
 }
 
+/// Prod by Jeongseup
+pub async fn get_validator_livenesses<C: crate::queries::Client + Sync>(
+    client: &C,
+) -> Result<Vec<(Address, String, u64)>, error::Error> {
+    convert_response::<C, _>(RPC.vp().pos().validator_livenesses(client).await)
+}
+
 /// Get the total staked tokens in the given epoch
 pub async fn get_total_staked_tokens<C: crate::queries::Client + Sync>(
     client: &C,
