@@ -12,6 +12,7 @@ use masp_primitives::merkle_tree::MerklePath;
 use masp_primitives::sapling::Node;
 use masp_primitives::transaction::components::I128Sum;
 use masp_primitives::zip32::ExtendedFullViewingKey;
+use namada_core::dec::Dec;
 use namada_core::masp::{BalanceOwner, MaspEpoch};
 use namada_core::token::Amount;
 use namada_sdk::address::{Address, InternalAddress, MASP};
@@ -1427,6 +1428,19 @@ pub async fn query_rewards<C: Client + Sync>(
 ) -> token::Amount {
     unwrap_client_response::<C, token::Amount>(
         RPC.vp().pos().rewards(client, validator, source).await,
+    )
+}
+
+pub async fn query_validator_rewards_product<C: Client + Sync>(
+    client: &C,
+    validator: &Address,
+    epoch: Option<Epoch>,
+) -> Vec<(Epoch, Dec)> {
+    unwrap_client_response::<C, _>(
+        RPC.vp()
+            .pos()
+            .rewards_products(client, validator, &epoch)
+            .await,
     )
 }
 
